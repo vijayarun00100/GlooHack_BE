@@ -434,4 +434,122 @@ class FamilyAlignmentResultResponse(BaseModel):
     notifications_sent: int = 0
     created_at: str
 
+# ==========================================
+# SCHEDULE QUALITY REVIEW AGENT SCHEMAS
+# ==========================================
+
+class QualityReviewRequestSchema(BaseModel):
+    timetable_version: str = "v1.0"
+    scope: str = "FULL_SCHOOL"
+    start_date: Optional[str] = "2026-08-25"
+    end_date: Optional[str] = "2026-08-25"
+    target_entity_id: Optional[str] = None
+    include_teachers: bool = True
+    include_sections: bool = True
+    include_rooms: bool = True
+    generate_recommendations: bool = True
+
+class TeacherWorkloadMetricsResponse(BaseModel):
+    teacher_id: str
+    teacher_name: str
+    department: str
+    total_teaching_periods: int = 0
+    max_consecutive_periods: int = 0
+    idle_gaps: int = 0
+    schedule_span: int = 0
+    room_changes: int = 0
+    preference_violations: int = 0
+    daily_loads: dict[str, int] = {}
+
+class RoomUtilizationMetricsResponse(BaseModel):
+    room_id: str
+    room_number: str
+    building: str
+    total_periods: int = 5
+    occupied_periods: int = 0
+    free_periods: int = 5
+    utilization_percentage: float = 0.0
+    status: str = "OPTIMAL"
+
+class SectionQualityMetricsResponse(BaseModel):
+    section_id: str
+    section_name: str
+    total_periods: int = 0
+    max_subject_consecutive: int = 0
+    room_changes: int = 0
+
+class QualityIssueResponse(BaseModel):
+    id: str
+    issue_type: str
+    severity: str
+    entity_type: str
+    entity_id: str
+    entity_name: str
+    metric_name: str
+    observed_value: float
+    threshold_value: float
+    description: str
+
+class QualityRecommendationResponse(BaseModel):
+    id: str
+    issue_id: Optional[str] = None
+    category: str
+    recommendation_text: str
+    expected_improvement: str
+    feasibility_status: str = "FEASIBLE"
+
+class OptimizationPlanChangeResponse(BaseModel):
+    timetable_entry_id: str
+    school_date: str
+    period_code: str
+    old_teacher_id: str
+    new_teacher_id: str
+    old_room_id: str
+    new_room_id: str
+    old_period_code: str
+    new_period_code: str
+    change_reason: str = ""
+
+class ScheduleOptimizationPlanResponse(BaseModel):
+    plan_id: str
+    review_id: str
+    timetable_version: str
+    plan_title: str
+    ranking_category: str
+    changes: list[OptimizationPlanChangeResponse] = []
+    affected_teachers: int = 0
+    affected_sections: int = 0
+    affected_rooms: int = 0
+    quality_before: float = 0.0
+    quality_after: float = 0.0
+    hard_conflicts: int = 0
+    soft_penalty: float = 0.0
+    status: str
+    explanation: str
+    created_at: str
+
+class QualityReviewResultResponse(BaseModel):
+    review_id: str
+    timetable_version: str
+    scope: str
+    overall_quality_score: float
+    teacher_balance_score: float
+    section_balance_score: float
+    room_utilization_score: float
+    preference_alignment_score: float
+    hard_conflicts_count: int
+    issues_count: int
+    recommendations_count: int
+    teacher_metrics: list[TeacherWorkloadMetricsResponse] = []
+    room_metrics: list[RoomUtilizationMetricsResponse] = []
+    section_metrics: list[SectionQualityMetricsResponse] = []
+    issues: list[QualityIssueResponse] = []
+    recommendations: list[QualityRecommendationResponse] = []
+    optimization_plans: list[ScheduleOptimizationPlanResponse] = []
+    status: str
+    summary: str
+    explanation: str
+    created_at: str
+
+
 

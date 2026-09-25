@@ -47,3 +47,12 @@
 - [43 Family Alignment API Reference](file:///d:/GlooHack/docs/43_FAMILY_ALIGNMENT_API.md)
 - [44 Phase 5 Decisions](file:///d:/GlooHack/docs/44_PHASE_5_DECISIONS.md)
 
+## Phase 6 - Schedule Quality Review & Teacher Work-Life Balance
+- [50 Schedule Quality Agent Overview](file:///d:/GlooHack/docs/50_SCHEDULE_QUALITY_AGENT.md)
+- [51 Quality Metrics](file:///d:/GlooHack/docs/51_QUALITY_METRICS.md)
+- [52 Teacher Work-Life Balance](file:///d:/GlooHack/docs/52_TEACHER_WORKLIFE_BALANCE.md)
+- [53 Room Utilization](file:///d:/GlooHack/docs/53_ROOM_UTILIZATION.md)
+- [54 Schedule Optimization](file:///d:/GlooHack/docs/54_SCHEDULE_OPTIMIZATION.md)
+- [55 Phase 6 Decisions](file:///d:/GlooHack/docs/55_PHASE_6_DECISIONS.md)
+
+
