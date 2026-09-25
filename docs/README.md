@@ -1,5 +1,6 @@
-# Documentation Index - Phase 0 Architecture
+# System & Solver Documentation Index
 
+## Phase 0 - Foundation Architecture
 - [01 System Architecture](file:///d:/GlooHack/docs/01_SYSTEM_ARCHITECTURE.md)
 - [02 Domain Model](file:///d:/GlooHack/docs/02_DOMAIN_MODEL.md)
 - [03 Database Schema](file:///d:/GlooHack/docs/03_DATABASE_SCHEMA.md)
@@ -10,3 +11,11 @@
 - [08 Human in the Loop](file:///d:/GlooHack/docs/08_HUMAN_IN_LOOP.md)
 - [09 Frontend Backend Contract](file:///d:/GlooHack/docs/09_FRONTEND_BACKEND_CONTRACT.md)
 - [10 Phase 0 Decisions](file:///d:/GlooHack/docs/10_PHASE_0_DECISIONS.md)
+
+## Phase 1 - Deterministic CP-SAT Solver & Conflict Engine
+- [10 Phase 1 Decisions](file:///d:/GlooHack/docs/10_PHASE_1_DECISIONS.md)
+- [11 Solver Architecture](file:///d:/GlooHack/docs/11_SOLVER_ARCHITECTURE.md)
+- [12 Solver Constraints](file:///d:/GlooHack/docs/12_SOLVER_CONSTRAINTS.md)
+- [13 Seed Data](file:///d:/GlooHack/docs/13_SEED_DATA.md)
+- [14 Timetable API](file:///d:/GlooHack/docs/14_TIMETABLE_API.md)
+- [15 Conflict Detection](file:///d:/GlooHack/docs/15_CONFLICT_DETECTION.md)

@@ -8,3 +8,4 @@ pgvector>=0.2.5
 pydantic>=2.7.0
 pydantic-settings>=2.2.0
 python-dotenv>=1.0.1
+ortools>=9.15.0

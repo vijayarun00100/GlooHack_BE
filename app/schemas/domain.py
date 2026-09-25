@@ -86,13 +86,14 @@ class RoomResponse(BaseModel):
     room_type: str
     status: str
 
-class RoomAvailabilityResponse(BaseModel):
-    id: UUID
-    room_id: UUID
-    date: date
-    period_code: str
-    is_available: bool
-    reason: Optional[str] = None
+class RoomUtilizationResponse(BaseModel):
+    room_id: str
+    date: str
+    total_periods: int
+    scheduled_periods: int
+    free_periods: int
+    utilization_percentage: float
+    status: str
 
 # ==========================================
 # TIMETABLE SCHEMAS
@@ -107,17 +108,52 @@ class PeriodResponse(BaseModel):
     period_order: int
 
 class TimetableEntryResponse(BaseModel):
-    id: UUID
-    version_id: UUID
-    school_date: date
-    period_id: UUID
-    section_id: UUID
-    course_id: UUID
-    teacher_id: UUID
-    room_id: UUID
+    id: Optional[str] = None
+    version_id: Optional[str] = None
+    school_date: str
+    period_code: str
+    period_id: str
+    section_id: str
+    course_id: str
+    teacher_id: str
+    room_id: str
     color_code: Optional[str] = "blue"
     flag: Optional[str] = None
     status: str = "SCHEDULED"
+
+# ==========================================
+# SOLVER & CONFLICT SCHEMAS
+# ==========================================
+
+class GenerateTimetableRequest(BaseModel):
+    academic_year: str = "2026-2027"
+    term: str = "Fall Term"
+    start_date: str = "2026-08-25"
+    end_date: str = "2026-08-27"
+    time_limit_seconds: float = 10.0
+
+class ConflictItemResponse(BaseModel):
+    conflict_type: str
+    severity: str
+    description: str
+    entity_ids: list[str]
+    period_code: Optional[str] = None
+    school_date: Optional[str] = None
+
+class ConflictReportResponse(BaseModel):
+    is_valid: bool
+    total_conflicts: int
+    hard_conflicts: list[ConflictItemResponse] = []
+    soft_conflicts: list[ConflictItemResponse] = []
+
+class SolverResultResponse(BaseModel):
+    status: str
+    timetable_entries: list[TimetableEntryResponse] = []
+    objective_value: float = 0.0
+    hard_constraint_violations: list[str] = []
+    soft_constraint_penalties: dict[str, float] = {}
+    solver_runtime_ms: float = 0.0
+    explanation: str = ""
 
 # ==========================================
 # DISRUPTION & RECOVERY SCHEMAS
