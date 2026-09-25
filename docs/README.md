@@ -55,4 +55,13 @@
 - [54 Schedule Optimization](file:///d:/GlooHack/docs/54_SCHEDULE_OPTIMIZATION.md)
 - [55 Phase 6 Decisions](file:///d:/GlooHack/docs/55_PHASE_6_DECISIONS.md)
 
+## Phase 7 - Planly: Personalized Study Planning Agent
+- [60 Planly Agent Overview](file:///d:/GlooHack/docs/60_PLANLY_AGENT.md)
+- [61 Planly Architecture](file:///d:/GlooHack/docs/61_PLANLY_ARCHITECTURE.md)
+- [62 Planly Data Model](file:///d:/GlooHack/docs/62_PLANLY_DATA_MODEL.md)
+- [63 Planly Planning Engine](file:///d:/GlooHack/docs/63_PLANLY_PLANNING_ENGINE.md)
+- [64 Planly Adaptive Replanning](file:///d:/GlooHack/docs/64_PLANLY_REPLANNING.md)
+- [65 Phase 7 Decisions](file:///d:/GlooHack/docs/65_PHASE_7_DECISIONS.md)
+
+
 

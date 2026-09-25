@@ -13,7 +13,9 @@ from app.schemas.domain import (
     FamilyAlignmentRequestSchema, FamilyAlignmentPlanResponse, FamilyAlignmentResultResponse,
     QualityReviewRequestSchema, QualityReviewResultResponse, ScheduleOptimizationPlanResponse,
     TeacherWorkloadMetricsResponse, RoomUtilizationMetricsResponse, SectionQualityMetricsResponse,
-    QualityIssueResponse, QualityRecommendationResponse, OptimizationPlanChangeResponse
+    QualityIssueResponse, QualityRecommendationResponse, OptimizationPlanChangeResponse,
+    StudyGoalCreateRequest, StudyPlanningRequest, StudyGoalResponse, StudyPlanResponse,
+    StudySprintResponse, StudyTaskResponse, StudyProgressResponse, PlanlyAgentResultResponse
 )
 from app.services.timetable_service import TimetableService
 from app.agents.teacher_substitution_agent import TeacherSubstitutionAgent
@@ -21,6 +23,7 @@ from app.agents.room_allocation_agent import RoomAllocationAgent, RoomDisruption
 from app.agents.disruption_recovery_agent import DisruptionRecoveryAgent, DisruptionEvent, RecoveryPlan
 from app.agents.family_alignment_agent import FamilyAlignmentAgent, FamilyAlignmentRequest, StudentDaySchedule, FamilyAlignmentPlan
 from app.agents.schedule_quality_agent import ScheduleQualityAgent, QualityReviewRequest, ScheduleOptimizationPlan
+from app.agents.planly_agent import PlanlyAgent
 from app.solver.models import (
     SolverInput, SolverConfig, SchoolDayDTO, PeriodDTO, SectionDTO,
     CourseDTO, TeacherDTO, RoomDTO, TeacherCapabilityDTO, TeacherAvailabilityDTO,
@@ -34,6 +37,8 @@ room_agent = RoomAllocationAgent()
 disruption_agent = DisruptionRecoveryAgent()
 family_agent = FamilyAlignmentAgent()
 quality_agent = ScheduleQualityAgent()
+planly_agent = PlanlyAgent()
+
 
 DEMO_QUALITY_REVIEWS: list[dict[str, Any]] = []
 DEMO_OPTIMIZATION_PLANS: dict[str, Any] = {}
@@ -962,6 +967,98 @@ def reject_optimization_plan(plan_id: str):
         "message": "Schedule optimization plan rejected by administrator.",
         "plan_id": plan_id
     }
+
+
+# ==========================================
+# PHASE 7 — PLANLY STUDY PLANNING ENDPOINTS
+# ==========================================
+
+@api_router.post("/study/goals", response_model=StudyGoalResponse, tags=["Planly Study Planning"])
+def create_study_goal(req: StudyGoalCreateRequest):
+    """Create or parse a student study goal."""
+    return planly_agent.create_goal(req)
+
+@api_router.get("/study/goals", response_model=list[StudyGoalResponse], tags=["Planly Study Planning"])
+def list_study_goals(student_id: str = "student-101"):
+    """List goals for a student."""
+    goals = [g for g in planly_agent.in_memory_goals.values() if g.get("student_id") == student_id]
+    return [StudyGoalResponse(**g) for g in goals]
+
+@api_router.get("/study/goals/{goal_id}", response_model=StudyGoalResponse, tags=["Planly Study Planning"])
+def get_study_goal(goal_id: str):
+    """Get study goal by ID."""
+    if goal_id not in planly_agent.in_memory_goals:
+        raise HTTPException(status_code=404, detail="Study goal not found")
+    return StudyGoalResponse(**planly_agent.in_memory_goals[goal_id])
+
+@api_router.post("/agents/planly/run", response_model=PlanlyAgentResultResponse, tags=["Planly Study Planning"])
+def run_planly_agent(req: StudyPlanningRequest):
+    """Run Planly agent to generate a personalized, schedule-aware study plan."""
+    return planly_agent.generate_study_plan(req)
+
+@api_router.post("/study/plans", response_model=PlanlyAgentResultResponse, tags=["Planly Study Planning"])
+def create_study_plan(req: StudyPlanningRequest):
+    """Create a new personalized study plan."""
+    return planly_agent.generate_study_plan(req)
+
+@api_router.get("/study/plans/{plan_id}", response_model=StudyPlanResponse, tags=["Planly Study Planning"])
+def get_study_plan(plan_id: str):
+    """Get study plan by ID."""
+    if plan_id not in planly_agent.in_memory_plans:
+        # Fallback to seed
+        plan_id = "plan-math-101"
+    return StudyPlanResponse(**planly_agent.in_memory_plans[plan_id])
+
+@api_router.get("/study/plans/{plan_id}/daily", response_model=list[StudySprintResponse], tags=["Planly Study Planning"])
+def get_daily_study_sprints(plan_id: str, school_date: Optional[str] = None):
+    """Get daily study sprints for a plan."""
+    if plan_id not in planly_agent.in_memory_plans:
+        plan_id = "plan-math-101"
+    plan = planly_agent.in_memory_plans[plan_id]
+    sprints = plan.get("sprints", [])
+    if school_date:
+        filtered = [s for s in sprints if (s.school_date if hasattr(s, "school_date") else s.get("school_date")) == school_date]
+        return [StudySprintResponse(**(s.dict() if hasattr(s, "dict") else s)) for s in filtered]
+    return [StudySprintResponse(**(s.dict() if hasattr(s, "dict") else s)) for s in sprints[:2]]
+
+@api_router.get("/study/plans/{plan_id}/weekly", tags=["Planly Study Planning"])
+def get_weekly_study_summary(plan_id: str):
+    """Get weekly study progress summary."""
+    if plan_id not in planly_agent.in_memory_plans:
+        plan_id = "plan-math-101"
+    plan = planly_agent.in_memory_plans[plan_id]
+    planned_hrs = plan.get("planned_hours", 8.0)
+    completed_hrs = plan.get("completed_hours", 1.7)
+    return {
+        "plan_id": plan_id,
+        "target_hours": plan.get("total_hours", 10.0),
+        "planned_hours": planned_hrs,
+        "completed_hours": completed_hrs,
+        "remaining_hours": max(0.0, round(planned_hrs - completed_hrs, 1)),
+        "completion_percentage": plan.get("completion_percentage", 21.3),
+        "subject_breakdown": {"Mathematics": 4.5, "Physics": 2.0, "Chemistry": 1.5}
+    }
+
+@api_router.post("/study/tasks/{task_id}/complete", tags=["Planly Study Planning"])
+def complete_study_task(task_id: str, actual_minutes: int = 50):
+    """Mark a study task as completed."""
+    return planly_agent.complete_task(task_id, actual_minutes)
+
+@api_router.post("/study/tasks/{task_id}/miss", tags=["Planly Study Planning"])
+def miss_study_task(task_id: str):
+    """Mark a study task as missed and trigger adaptive replanning."""
+    return planly_agent.miss_task(task_id)
+
+@api_router.post("/study/plans/{plan_id}/replan", response_model=StudyPlanResponse, tags=["Planly Study Planning"])
+def replan_study_plan(plan_id: str, reason: str = "ADAPTIVE_REPLAN"):
+    """Adaptively replan remaining study tasks."""
+    return planly_agent.replan_study_plan(plan_id, reason)
+
+@api_router.get("/study/progress", response_model=StudyProgressResponse, tags=["Planly Study Planning"])
+def get_student_study_progress(student_id: str = "student-101"):
+    """Get student study progress across all goals."""
+    return planly_agent.get_progress(student_id)
+
 
 
 

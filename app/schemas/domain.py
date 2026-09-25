@@ -546,10 +546,120 @@ class QualityReviewResultResponse(BaseModel):
     issues: list[QualityIssueResponse] = []
     recommendations: list[QualityRecommendationResponse] = []
     optimization_plans: list[ScheduleOptimizationPlanResponse] = []
-    status: str
     summary: str
     explanation: str
     created_at: str
+
+
+# ==========================================
+# PHASE 7 — PLANLY STUDY PLANNING SCHEMAS
+# ==========================================
+
+class StudyGoalCreateRequest(BaseModel):
+    student_id: str = "student-101"
+    title: str
+    description: Optional[str] = None
+    target_date: str
+    priority: str = "HIGH"
+    subjects: list[str] = ["Mathematics"]
+    focus_topics: list[str] = ["Algebra", "Quadratic Equations", "Functions"]
+    natural_language_prompt: Optional[str] = None
+
+class StudyPlanningRequest(BaseModel):
+    student_id: str = "student-101"
+    goal_id: Optional[str] = None
+    goal: Optional[str] = "Prepare for Mathematics midterm"
+    target_date: Optional[str] = "2026-10-15"
+    subjects: list[str] = ["Mathematics"]
+    priority: str = "HIGH"
+    available_study_hours_per_week: float = 10.0
+    preferred_session_minutes: int = 50
+    preferred_days: list[str] = ["MONDAY", "TUESDAY", "THURSDAY", "SATURDAY"]
+    energy_preference: str = "NORMAL" # "LOW", "NORMAL", "HIGH"
+    learning_preferences: list[str] = ["PRACTICE", "REVISION"]
+    natural_language_prompt: Optional[str] = None
+
+class StudyTaskResponse(BaseModel):
+    id: str
+    sprint_id: str
+    title: str
+    description: Optional[str] = None
+    task_type: str = "PRACTICE_PROBLEMS"
+    estimated_minutes: int = 30
+    actual_minutes: int = 0
+    priority: str = "HIGH"
+    status: str = "PLANNED"
+
+class StudySprintResponse(BaseModel):
+    id: str
+    plan_id: str
+    school_date: str
+    start_time: str
+    end_time: str
+    duration_minutes: int
+    subject: str
+    focus_area: str
+    sprint_type: str
+    status: str = "PLANNED"
+    tasks: list[StudyTaskResponse] = []
+
+class StudyGoalResponse(BaseModel):
+    id: str
+    student_id: str
+    title: str
+    description: Optional[str] = None
+    target_date: str
+    priority: str
+    status: str
+    subjects: list[str]
+    focus_topics: list[str]
+    created_at: str
+
+class StudyPlanResponse(BaseModel):
+    id: str
+    student_id: str
+    goal_id: Optional[str] = None
+    goal_title: str = ""
+    start_date: str
+    end_date: str
+    status: str
+    total_hours: float
+    planned_hours: float
+    completed_hours: float
+    completion_percentage: float
+    feasibility_score: float = 100.0
+    goal_coverage_score: float = 92.0
+    time_utilization_score: float = 88.0
+    deadline_safety_score: float = 95.0
+    workload_balance_score: float = 90.0
+    overall_quality_score: float = 92.0
+    energy_preference: str = "NORMAL"
+    sprints: list[StudySprintResponse] = []
+    created_at: str
+
+class StudyProgressResponse(BaseModel):
+    student_id: str
+    total_goals: int = 1
+    total_plans: int = 1
+    total_sprints: int = 0
+    completed_sprints: int = 0
+    total_tasks: int = 0
+    completed_tasks: int = 0
+    missed_tasks: int = 0
+    completed_hours: float = 0.0
+    overall_completion_percentage: float = 0.0
+    subject_progress: dict[str, float] = {}
+
+class PlanlyAgentResultResponse(BaseModel):
+    agent: str = "PLANLY"
+    goal: StudyGoalResponse
+    plan: StudyPlanResponse
+    daily_sprints: list[StudySprintResponse] = []
+    weekly_summary: dict[str, Any] = {}
+    plan_health: dict[str, float] = {}
+    explanation: str
+    status: str = "SUCCESS"
+
 
 
 
