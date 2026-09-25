@@ -26,3 +26,9 @@
 - [18 Substitution Decision Engine](file:///d:/GlooHack/docs/18_SUBSTITUTION_DECISION_ENGINE.md)
 - [19 Approval Workflow](file:///d:/GlooHack/docs/19_APPROVAL_WORKFLOW.md)
 - [20 Phase 2 Decisions](file:///d:/GlooHack/docs/20_PHASE_2_DECISIONS.md)
+
+## Phase 3 - Room Allocation Agent
+- [21 Room Allocation Agent](file:///d:/GlooHack/docs/21_ROOM_ALLOCATION_AGENT.md)
+- [22 Room Disruption Ingestion](file:///d:/GlooHack/docs/22_ROOM_DISRUPTION_INGESTION.md)
+- [23 Room Reallocation Engine](file:///d:/GlooHack/docs/23_ROOM_REALLOCATION_ENGINE.md)
+- [24 Phase 3 Decisions](file:///d:/GlooHack/docs/24_PHASE_3_DECISIONS.md)
