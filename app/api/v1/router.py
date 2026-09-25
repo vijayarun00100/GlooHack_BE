@@ -5,11 +5,13 @@ from app.schemas.domain import (
     UserResponse, TeacherResponse, StudentResponse, GradeResponse,
     SectionResponse, SubjectResponse, CourseResponse, RoomResponse,
     RoomUtilizationResponse, TimetableEntryResponse, GenerateTimetableRequest,
-    SolverResultResponse, ConflictReportResponse, DisruptionCreate, DisruptionResponse,
-    RecoveryPlanResponse, AgentEventResponse, AgentRunResponse,
-    AgentDecisionResponse, ApprovalRequestResponse, DecisionMemoryCreate
+    SolverResultResponse, ConflictReportResponse, IngestEmailRequest,
+    SubstitutionAgentResultResponse, RoomDisruptionRequest, RoomAllocationAgentResultResponse,
+    ApprovalRequestResponse, AgentEventResponse, AgentRunResponse, AgentDecisionResponse
 )
 from app.services.timetable_service import TimetableService
+from app.agents.teacher_substitution_agent import TeacherSubstitutionAgent
+from app.agents.room_allocation_agent import RoomAllocationAgent, RoomDisruptionEvent
 from app.solver.models import (
     SolverInput, SolverConfig, SchoolDayDTO, PeriodDTO, SectionDTO,
     CourseDTO, TeacherDTO, RoomDTO, TeacherCapabilityDTO, TeacherAvailabilityDTO,
@@ -18,8 +20,10 @@ from app.solver.models import (
 
 api_router = APIRouter()
 timetable_service = TimetableService()
+substitution_agent = TeacherSubstitutionAgent()
+room_agent = RoomAllocationAgent()
 
-# Simulated in-memory database store for Phase 1 demo endpoints
+# In-memory stores for Phase 1, 2 & 3 demo endpoints
 DEMO_TIMETABLE_ENTRIES: list[ScheduledEntryDTO] = [
     ScheduledEntryDTO(school_date="2026-08-25", period_code="P1", period_id="p1", section_id="8A", course_id="c_lit", teacher_id="Cooper", room_id="Room 201", color_code="blue"),
     ScheduledEntryDTO(school_date="2026-08-25", period_code="P1", period_id="p1", section_id="8B", course_id="c_lit", teacher_id="Cooper", room_id="Room 207", color_code="blue"),
@@ -30,6 +34,9 @@ DEMO_TIMETABLE_ENTRIES: list[ScheduledEntryDTO] = [
     ScheduledEntryDTO(school_date="2026-08-25", period_code="P3", period_id="p3", section_id="8A", course_id="c_alg", teacher_id="Smith", room_id="Room 202", color_code="teal"),
     ScheduledEntryDTO(school_date="2026-08-25", period_code="P3", period_id="p3", section_id="8B", course_id="c_alg", teacher_id="Smith", room_id="Room 208", color_code="teal", flag="warning"),
 ]
+
+DEMO_ABSENCES = []
+DEMO_ROOM_DISRUPTIONS = []
 
 def build_default_solver_input() -> SolverInput:
     days = [
@@ -91,6 +98,126 @@ def build_default_solver_input() -> SolverInput:
     )
 
 # ==========================================
+# ROOM ALLOCATION AGENT ENDPOINTS
+# ==========================================
+
+@api_router.post("/room-disruptions", response_model=RoomAllocationAgentResultResponse, tags=["Room Allocation Agent"])
+def create_room_disruption(req: RoomDisruptionRequest):
+    event = RoomDisruptionEvent(**req.__dict__)
+    inp = build_default_solver_input()
+    res = room_agent.process_room_disruption(event, inp, DEMO_TIMETABLE_ENTRIES)
+    DEMO_ROOM_DISRUPTIONS.append(res)
+    return res
+
+@api_router.get("/room-disruptions", tags=["Room Allocation Agent"])
+def list_room_disruptions():
+    return DEMO_ROOM_DISRUPTIONS
+
+@api_router.get("/room-disruptions/{disruption_id}/affected-classes", tags=["Room Allocation Agent"])
+def get_room_affected_classes(disruption_id: str):
+    found = next((r for r in DEMO_ROOM_DISRUPTIONS if r.agent_run_id == disruption_id), None)
+    if not found:
+        return []
+    return found.requirements
+
+@api_router.post("/room-disruptions/{disruption_id}/approve", tags=["Room Allocation Agent"])
+def approve_room_reallocation(disruption_id: str):
+    found = next((r for r in DEMO_ROOM_DISRUPTIONS if r.agent_run_id == disruption_id or r.approval_request_id == disruption_id), None)
+    if not found:
+        raise HTTPException(status_code=404, detail="Room disruption request not found")
+
+    # Commit approved room reallocations
+    for req in found.requirements:
+        if req.selected_candidate:
+            for entry in DEMO_TIMETABLE_ENTRIES:
+                if entry.room_id == found.disrupted_room_id and entry.period_code == req.period_code and entry.school_date == req.school_date:
+                    entry.room_id = req.selected_candidate.room_id
+                    entry.flag = "updated"
+
+    found.status = "REALLOCATED"
+    found.execution_mode = "APPROVED"
+    return {"status": "APPROVED", "disruption_id": disruption_id, "message": "Room reallocations committed to active timetable."}
+
+@api_router.post("/room-disruptions/{disruption_id}/reject", tags=["Room Allocation Agent"])
+def reject_room_reallocation(disruption_id: str):
+    found = next((r for r in DEMO_ROOM_DISRUPTIONS if r.agent_run_id == disruption_id or r.approval_request_id == disruption_id), None)
+    if not found:
+        raise HTTPException(status_code=404, detail="Room disruption request not found")
+    found.status = "REJECTED"
+    return {"status": "REJECTED", "disruption_id": disruption_id, "message": "Room reallocation proposal rejected."}
+
+@api_router.post("/agents/room-allocation/run", response_model=RoomAllocationAgentResultResponse, tags=["Agents"])
+def run_room_allocation_agent(room_id: str = "Room 201", event_type: str = "CLOSED"):
+    event = RoomDisruptionEvent(
+        room_id=room_id,
+        event_type=event_type,
+        start_date="2026-08-25",
+        end_date="2026-08-25",
+        reason="Facility renovation"
+    )
+    inp = build_default_solver_input()
+    return room_agent.process_room_disruption(event, inp, DEMO_TIMETABLE_ENTRIES)
+
+# ==========================================
+# TEACHER SUBSTITUTION ENDPOINTS
+# ==========================================
+
+@api_router.post("/teacher-absences/ingest", response_model=SubstitutionAgentResultResponse, tags=["Teacher Substitution"])
+def ingest_teacher_absence_email(req: IngestEmailRequest):
+    inp = build_default_solver_input()
+    res = substitution_agent.process_absence_email(req.raw_email, inp, DEMO_TIMETABLE_ENTRIES)
+    DEMO_ABSENCES.append(res)
+    return res
+
+@api_router.get("/teacher-absences", tags=["Teacher Substitution"])
+def list_teacher_absences():
+    return DEMO_ABSENCES
+
+@api_router.get("/teacher-absences/{absence_id}/affected-classes", tags=["Teacher Substitution"])
+def get_affected_classes(absence_id: str):
+    found = next((a for a in DEMO_ABSENCES if a.agent_run_id == absence_id), None)
+    if not found:
+        return []
+    return found.requirements
+
+@api_router.post("/teacher-absences/{absence_id}/approve", tags=["Teacher Substitution"])
+def approve_substitution(absence_id: str):
+    found = next((a for a in DEMO_ABSENCES if a.agent_run_id == absence_id or a.approval_request_id == absence_id), None)
+    if not found:
+        raise HTTPException(status_code=404, detail="Absence substitution request not found")
+    for req in found.requirements:
+        if req.selected_candidate:
+            for entry in DEMO_TIMETABLE_ENTRIES:
+                if entry.teacher_id == found.absent_teacher_id and entry.period_code == req.period_code and entry.school_date == found.absence_date:
+                    entry.teacher_id = req.selected_candidate.teacher_id
+                    entry.flag = "updated"
+    found.status = "RESOLVED"
+    found.execution_mode = "APPROVED"
+    return {"status": "APPROVED", "absence_id": absence_id, "message": "Substitutions committed to timetable version."}
+
+@api_router.post("/teacher-absences/{absence_id}/reject", tags=["Teacher Substitution"])
+def reject_substitution(absence_id: str):
+    found = next((a for a in DEMO_ABSENCES if a.agent_run_id == absence_id or a.approval_request_id == absence_id), None)
+    if not found:
+        raise HTTPException(status_code=404, detail="Absence substitution request not found")
+    found.status = "REJECTED"
+    return {"status": "REJECTED", "absence_id": absence_id, "message": "Substitution proposal rejected."}
+
+@api_router.post("/teacher-absences/{absence_id}/cancel", tags=["Teacher Substitution"])
+def cancel_absence(absence_id: str):
+    found = next((a for a in DEMO_ABSENCES if a.agent_run_id == absence_id), None)
+    if not found:
+        raise HTTPException(status_code=404, detail="Absence request not found")
+    found.status = "CANCELLED"
+    return {"status": "CANCELLED", "absence_id": absence_id, "message": "Absence event cancelled."}
+
+@api_router.post("/agents/teacher-substitution/run", response_model=SubstitutionAgentResultResponse, tags=["Agents"])
+def run_teacher_substitution_agent(raw_email: str = "Hi Admin, I will be absent tomorrow due to a doctor appointment. Regards, Cooper"):
+    inp = build_default_solver_input()
+    res = substitution_agent.process_absence_email(raw_email, inp, DEMO_TIMETABLE_ENTRIES)
+    return res
+
+# ==========================================
 # TIMETABLE & SOLVER ENDPOINTS
 # ==========================================
 
@@ -123,11 +250,9 @@ def generate_timetable(req: GenerateTimetableRequest):
     inp = build_default_solver_input()
     inp.config.time_limit_seconds = req.time_limit_seconds
     res = timetable_service.generate_timetable(inp)
-    
     if res.timetable_entries:
         global DEMO_TIMETABLE_ENTRIES
         DEMO_TIMETABLE_ENTRIES = res.timetable_entries
-
     return SolverResultResponse(
         status=res.status.value,
         timetable_entries=[TimetableEntryResponse(**e.__dict__) for e in res.timetable_entries],
@@ -168,10 +293,6 @@ def get_room_utilization(room_id: str, date_str: str = Query("2026-08-25")):
     res = timetable_service.calculate_room_utilization(room_id, date_str, total_periods=5, scheduled_entries=entries_dict)
     return RoomUtilizationResponse(**res)
 
-# ==========================================
-# USERS & ACADEMIC
-# ==========================================
-
 @api_router.get("/users", tags=["Users"])
 def list_users():
     return []
@@ -192,13 +313,9 @@ def list_grades():
 def list_sections():
     return []
 
-# ==========================================
-# DISRUPTIONS & AGENTS
-# ==========================================
-
-@api_router.get("/disruptions", response_model=list[DisruptionResponse], tags=["Disruptions"])
+@api_router.get("/disruptions", tags=["Disruptions"])
 def list_disruptions():
-    return []
+    return DEMO_ROOM_DISRUPTIONS
 
 @api_router.get("/agents/events", response_model=list[AgentEventResponse], tags=["Agents"])
 def list_agent_events():

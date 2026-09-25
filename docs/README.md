@@ -1,4 +1,4 @@
-# System & Solver Documentation Index
+# System, Solver & Agent Documentation Index
 
 ## Phase 0 - Foundation Architecture
 - [01 System Architecture](file:///d:/GlooHack/docs/01_SYSTEM_ARCHITECTURE.md)
@@ -19,3 +19,10 @@
 - [13 Seed Data](file:///d:/GlooHack/docs/13_SEED_DATA.md)
 - [14 Timetable API](file:///d:/GlooHack/docs/14_TIMETABLE_API.md)
 - [15 Conflict Detection](file:///d:/GlooHack/docs/15_CONFLICT_DETECTION.md)
+
+## Phase 2 - Teacher Substitution Agent
+- [16 Teacher Substitution Agent](file:///d:/GlooHack/docs/16_TEACHER_SUBSTITUTION_AGENT.md)
+- [17 Email Ingestion](file:///d:/GlooHack/docs/17_EMAIL_INGESTION.md)
+- [18 Substitution Decision Engine](file:///d:/GlooHack/docs/18_SUBSTITUTION_DECISION_ENGINE.md)
+- [19 Approval Workflow](file:///d:/GlooHack/docs/19_APPROVAL_WORKFLOW.md)
+- [20 Phase 2 Decisions](file:///d:/GlooHack/docs/20_PHASE_2_DECISIONS.md)

@@ -96,6 +96,62 @@ class RoomUtilizationResponse(BaseModel):
     status: str
 
 # ==========================================
+# ROOM DISRUPTION & ALLOCATION AGENT SCHEMAS
+# ==========================================
+
+class RoomDisruptionRequest(BaseModel):
+    room_id: str
+    event_type: str  # 'CLOSED', 'MAINTENANCE', 'EQUIPMENT_FAILURE', 'CAPACITY_RESTRICTION'
+    start_date: str
+    end_date: str
+    start_period: Optional[str] = "P1"
+    end_period: Optional[str] = "P5"
+    reason: str = "Facility disruption"
+    required_equipment_impact: list[str] = []
+    capacity_restriction: Optional[int] = None
+    source: str = "ADMIN"
+
+class RoomCandidateResponse(BaseModel):
+    room_id: str
+    room_number: str
+    capacity: int
+    capacity_waste: int
+    equipment_ok: bool
+    available_ok: bool
+    hard_conflicts_count: int
+    penalty_score: float
+    status: str
+    explanation: str
+
+class RoomReallocationRequirementResponse(BaseModel):
+    period_code: str
+    school_date: str
+    section_id: str
+    course_id: str
+    course_title: str
+    teacher_id: str
+    original_room_id: str
+    original_room_number: str
+    section_student_count: int
+    ranked_candidates: list[RoomCandidateResponse] = []
+    selected_candidate: Optional[RoomCandidateResponse] = None
+
+class RoomAllocationAgentResultResponse(BaseModel):
+    agent_run_id: str
+    event_id: str
+    status: str
+    execution_mode: str
+    disrupted_room_id: str
+    disrupted_room_number: str
+    event_type: str
+    affected_classes_count: int
+    requirements: list[RoomReallocationRequirementResponse] = []
+    summary: str
+    explanation: str
+    approval_request_id: Optional[str] = None
+    created_at: str
+
+# ==========================================
 # TIMETABLE SCHEMAS
 # ==========================================
 
@@ -156,30 +212,49 @@ class SolverResultResponse(BaseModel):
     explanation: str = ""
 
 # ==========================================
-# DISRUPTION & RECOVERY SCHEMAS
+# TEACHER SUBSTITUTION SCHEMAS
 # ==========================================
 
-class DisruptionCreate(BaseModel):
-    title: str
-    type: str
-    severity: str = "MEDIUM"
-    start_time: datetime
-    end_time: datetime
-    description: Optional[str] = None
+class IngestEmailRequest(BaseModel):
+    raw_email: str
+    sender_email: Optional[str] = "cooper@school.edu"
 
-class DisruptionResponse(DisruptionCreate):
-    id: UUID
+class CandidateOptionResponse(BaseModel):
+    teacher_id: str
+    teacher_name: str
+    qualification_ok: bool
+    available_ok: bool
+    hard_conflicts_count: int
+    penalty_score: float
     status: str
-    created_at: datetime
+    explanation: str
 
-class RecoveryPlanResponse(BaseModel):
-    id: UUID
-    disruption_id: UUID
-    plan_title: str
-    score: Optional[float] = None
+class SubstitutionRequirementResponse(BaseModel):
+    period_code: str
+    school_date: str
+    section_id: str
+    course_id: str
+    course_title: str
+    original_teacher_id: str
+    original_teacher_name: str
+    room_id: str
+    ranked_candidates: list[CandidateOptionResponse] = []
+    selected_candidate: Optional[CandidateOptionResponse] = None
+
+class SubstitutionAgentResultResponse(BaseModel):
+    agent_run_id: str
+    event_id: str
     status: str
-    explanation: Optional[str] = None
-    options: list[dict[str, Any]] = []
+    execution_mode: str
+    absence_date: str
+    absent_teacher_id: Optional[str] = None
+    absent_teacher_name: str
+    affected_classes_count: int
+    requirements: list[SubstitutionRequirementResponse] = []
+    summary: str
+    explanation: str
+    approval_request_id: Optional[str] = None
+    created_at: str
 
 # ==========================================
 # AGENT & APPROVAL SCHEMAS
@@ -221,10 +296,6 @@ class ApprovalRequestResponse(BaseModel):
     impact_assessment: dict[str, Any]
     status: str
     created_at: datetime
-
-# ==========================================
-# MEMORY SCHEMAS
-# ==========================================
 
 class DecisionMemoryCreate(BaseModel):
     agent_name: str
