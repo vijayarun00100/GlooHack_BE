@@ -15,7 +15,10 @@ from app.schemas.domain import (
     TeacherWorkloadMetricsResponse, RoomUtilizationMetricsResponse, SectionQualityMetricsResponse,
     QualityIssueResponse, QualityRecommendationResponse, OptimizationPlanChangeResponse,
     StudyGoalCreateRequest, StudyPlanningRequest, StudyGoalResponse, StudyPlanResponse,
-    StudySprintResponse, StudyTaskResponse, StudyProgressResponse, PlanlyAgentResultResponse
+    StudySprintResponse, StudyTaskResponse, StudyProgressResponse, PlanlyAgentResultResponse,
+    GamificationProfileResponse, AchievementResponse, StudentAchievementResponse,
+    GamificationEventRequest, SocialPostCreateRequest, SocialPostResponse,
+    SocialReactionRequest, SocialPrivacySettingsRequest, SocialPrivacySettingsResponse
 )
 from app.services.timetable_service import TimetableService
 from app.agents.teacher_substitution_agent import TeacherSubstitutionAgent
@@ -24,6 +27,7 @@ from app.agents.disruption_recovery_agent import DisruptionRecoveryAgent, Disrup
 from app.agents.family_alignment_agent import FamilyAlignmentAgent, FamilyAlignmentRequest, StudentDaySchedule, FamilyAlignmentPlan
 from app.agents.schedule_quality_agent import ScheduleQualityAgent, QualityReviewRequest, ScheduleOptimizationPlan
 from app.agents.planly_agent import PlanlyAgent
+from app.agents.gamification_agent import GamificationAgent
 from app.solver.models import (
     SolverInput, SolverConfig, SchoolDayDTO, PeriodDTO, SectionDTO,
     CourseDTO, TeacherDTO, RoomDTO, TeacherCapabilityDTO, TeacherAvailabilityDTO,
@@ -38,6 +42,8 @@ disruption_agent = DisruptionRecoveryAgent()
 family_agent = FamilyAlignmentAgent()
 quality_agent = ScheduleQualityAgent()
 planly_agent = PlanlyAgent()
+gamification_agent = GamificationAgent()
+
 
 
 DEMO_QUALITY_REVIEWS: list[dict[str, Any]] = []
@@ -1058,6 +1064,52 @@ def replan_study_plan(plan_id: str, reason: str = "ADAPTIVE_REPLAN"):
 def get_student_study_progress(student_id: str = "student-101"):
     """Get student study progress across all goals."""
     return planly_agent.get_progress(student_id)
+
+
+# ==========================================
+# PHASE 8 — GAMIFICATION & SOCIAL ENDPOINTS
+# ==========================================
+
+@api_router.get("/gamification/profile", response_model=GamificationProfileResponse, tags=["Gamification & Social"])
+def get_gamification_profile(student_id: str = "student-101"):
+    """Get student gamification profile (XP, level, coins, streaks)."""
+    return gamification_agent.get_profile(student_id)
+
+@api_router.post("/gamification/events", tags=["Gamification & Social"])
+def process_gamification_event(req: GamificationEventRequest):
+    """Process a verified academic event with idempotency guarantees."""
+    return gamification_agent.process_event(req)
+
+@api_router.get("/gamification/achievements", response_model=list[AchievementResponse], tags=["Gamification & Social"])
+def get_achievements(student_id: str = "student-101"):
+    """Get list of achievements with unlock status and progress."""
+    return gamification_agent.get_achievements(student_id)
+
+@api_router.get("/social/feed", response_model=list[SocialPostResponse], tags=["Gamification & Social"])
+def get_social_feed(visibility: str = "CLASS"):
+    """Get opt-in student social achievement feed."""
+    return gamification_agent.get_social_feed(visibility)
+
+@api_router.post("/social/posts", response_model=SocialPostResponse, tags=["Gamification & Social"])
+def create_social_post(req: SocialPostCreateRequest):
+    """Explicitly publish an unlocked achievement or milestone post."""
+    return gamification_agent.create_social_post(req)
+
+@api_router.post("/social/posts/{post_id}/react", tags=["Gamification & Social"])
+def react_to_social_post(post_id: str, req: SocialReactionRequest):
+    """Add a reaction (👏, 🔥, 🎉, ⭐) to a shared achievement post."""
+    return gamification_agent.react_to_post(post_id, req)
+
+@api_router.get("/social/privacy", response_model=SocialPrivacySettingsResponse, tags=["Gamification & Social"])
+def get_social_privacy_settings(student_id: str = "student-101"):
+    """Get student privacy settings."""
+    return gamification_agent.get_privacy_settings(student_id)
+
+@api_router.put("/social/privacy", response_model=SocialPrivacySettingsResponse, tags=["Gamification & Social"])
+def update_social_privacy_settings(req: SocialPrivacySettingsRequest):
+    """Update student privacy settings."""
+    return gamification_agent.update_privacy_settings(req)
+
 
 
 

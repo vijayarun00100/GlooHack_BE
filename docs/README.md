@@ -63,5 +63,15 @@
 - [64 Planly Adaptive Replanning](file:///d:/GlooHack/docs/64_PLANLY_REPLANNING.md)
 - [65 Phase 7 Decisions](file:///d:/GlooHack/docs/65_PHASE_7_DECISIONS.md)
 
+## Phase 8 - Gamification & Social Achievement Engine
+- [70 Gamification Overview](file:///d:/GlooHack/docs/70_GAMIFICATION_OVERVIEW.md)
+- [71 Gamification Architecture](file:///d:/GlooHack/docs/71_GAMIFICATION_ARCHITECTURE.md)
+- [72 XP, Level & Streak System](file:///d:/GlooHack/docs/72_XP_LEVEL_STREAK_SYSTEM.md)
+- [73 Achievement Engine](file:///d:/GlooHack/docs/73_ACHIEVEMENT_ENGINE.md)
+- [74 Social Architecture](file:///d:/GlooHack/docs/74_SOCIAL_ARCHITECTURE.md)
+- [75 Privacy & Safety](file:///d:/GlooHack/docs/75_PRIVACY_AND_SAFETY.md)
+- [76 Phase 8 Decisions](file:///d:/GlooHack/docs/76_PHASE_8_DECISIONS.md)
+
+
 
 

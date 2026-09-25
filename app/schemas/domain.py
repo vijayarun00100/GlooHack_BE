@@ -661,5 +661,89 @@ class PlanlyAgentResultResponse(BaseModel):
     status: str = "SUCCESS"
 
 
+# ==========================================
+# PHASE 8 — GAMIFICATION & SOCIAL SCHEMAS
+# ==========================================
+
+class GamificationProfileResponse(BaseModel):
+    student_id: str = "student-101"
+    total_xp: int = 2840
+    current_level: int = 8
+    xp_for_next_level: int = 3500
+    xp_progress_percentage: float = 81.1
+    coins: int = 420
+    current_streak: int = 7
+    longest_streak: int = 12
+    total_study_minutes: int = 600
+    total_tasks_completed: int = 14
+    last_activity_date: Optional[str] = "2026-10-05"
+
+class AchievementResponse(BaseModel):
+    code: str
+    name: str
+    description: str
+    category: str = "GENERAL"
+    icon: str = "🏆"
+    xp_reward: int = 100
+    coin_reward: int = 10
+    unlocked: bool = False
+    progress_percentage: float = 0.0
+    unlocked_at: Optional[str] = None
+
+class StudentAchievementResponse(BaseModel):
+    id: str
+    student_id: str
+    achievement_code: str
+    unlocked_at: str
+    progress: float = 100.0
+
+class GamificationEventRequest(BaseModel):
+    student_id: str = "student-101"
+    event_type: str
+    source: str = "PLANLY"
+    source_id: str
+    metadata: dict[str, Any] = {}
+
+class SocialPostCreateRequest(BaseModel):
+    student_id: str = "student-101"
+    student_name: str = "Student A"
+    post_type: str = "ACHIEVEMENT" # 'ACHIEVEMENT', 'STREAK', 'MILESTONE', 'GOAL_COMPLETION'
+    achievement_code: Optional[str] = "SEVEN_DAY_STREAK"
+    title: str = "Unlocked 7-Day Study Streak!"
+    content: str = "🎉 I completed a 7-day study streak on Planly!"
+    visibility: str = "CLASS" # 'PRIVATE', 'FRIENDS', 'CLASS', 'PUBLIC'
+
+class SocialPostResponse(BaseModel):
+    id: str
+    student_id: str
+    student_name: str
+    post_type: str
+    achievement_code: Optional[str] = None
+    title: str
+    content: str
+    visibility: str
+    reactions_count: int = 0
+    reactions_breakdown: dict[str, int] = {"🔥": 0, "👏": 0, "🎉": 0}
+    created_at: str
+
+class SocialReactionRequest(BaseModel):
+    student_id: str = "student-101"
+    reaction_type: str = "🔥" # '👏', '🔥', '🎉', '⭐'
+
+class SocialPrivacySettingsRequest(BaseModel):
+    student_id: str = "student-101"
+    achievement_visibility: str = "CLASS"
+    profile_visibility: str = "CLASS"
+    social_enabled: bool = True
+
+class SocialPrivacySettingsResponse(BaseModel):
+    student_id: str
+    achievement_visibility: str
+    profile_visibility: str
+    social_enabled: bool
+    updated_at: str
+
+
+
 
 
