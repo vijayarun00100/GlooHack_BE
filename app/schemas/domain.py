@@ -308,3 +308,67 @@ class DecisionMemoryCreate(BaseModel):
 class DecisionMemoryResponse(DecisionMemoryCreate):
     id: UUID
     created_at: datetime
+
+# ==========================================
+# DISRUPTION RECOVERY AGENT SCHEMAS
+# ==========================================
+
+class CampusDisruptionRequest(BaseModel):
+    event_type: str = "CAMPUS_DISRUPTION"
+    title: str
+    description: str = ""
+    start_date: str
+    end_date: str
+    start_period: str = "P1"
+    end_period: str = "P5"
+    affected_rooms: list[str] = []
+    affected_teachers: list[str] = []
+    affected_sections: list[str] = []
+    severity: str = "HIGH"
+    source: str = "ADMIN"
+
+class RecoveryPlanChangeResponse(BaseModel):
+    timetable_entry_id: str
+    school_date: str
+    old_teacher_id: str
+    new_teacher_id: str
+    old_room_id: str
+    new_room_id: str
+    old_period_code: str
+    new_period_code: str
+    change_reason: str = ""
+
+class RecoveryPlanResponse(BaseModel):
+    plan_id: str
+    disruption_id: str
+    timetable_version: str
+    plan_title: str
+    ranking_category: str
+    changes: list[RecoveryPlanChangeResponse] = []
+    hard_conflicts: int = 0
+    soft_penalty: float = 0.0
+    affected_classes: int = 0
+    affected_teachers: int = 0
+    affected_rooms: int = 0
+    status: str
+    explanation: str
+    created_at: str
+
+class DisruptionRecoveryResultResponse(BaseModel):
+    agent_run_id: str
+    event_id: str
+    status: str
+    execution_mode: str
+    disruption_title: str
+    affected_classes_count: int
+    affected_teachers_count: int
+    affected_rooms_count: int
+    timetable_version: str
+    plans: list[RecoveryPlanResponse] = []
+    selected_plan_id: Optional[str] = None
+    summary: str
+    explanation: str
+    approval_request_id: Optional[str] = None
+    notifications_sent: int = 0
+    created_at: str
+

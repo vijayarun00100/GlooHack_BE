@@ -32,3 +32,10 @@
 - [22 Room Disruption Ingestion](file:///d:/GlooHack/docs/22_ROOM_DISRUPTION_INGESTION.md)
 - [23 Room Reallocation Engine](file:///d:/GlooHack/docs/23_ROOM_REALLOCATION_ENGINE.md)
 - [24 Phase 3 Decisions](file:///d:/GlooHack/docs/24_PHASE_3_DECISIONS.md)
+
+## Phase 4 - Disruption Recovery Agent
+- [30 Disruption Recovery Agent Overview](file:///d:/GlooHack/docs/30_DISRUPTION_RECOVERY_AGENT.md)
+- [31 Recovery Architecture](file:///d:/GlooHack/docs/31_RECOVERY_ARCHITECTURE.md)
+- [32 Recovery Constraints](file:///d:/GlooHack/docs/32_RECOVERY_CONSTRAINTS.md)
+- [33 Recovery API Reference](file:///d:/GlooHack/docs/33_RECOVERY_API.md)
+- [34 Phase 4 Decisions](file:///d:/GlooHack/docs/34_PHASE_4_DECISIONS.md)

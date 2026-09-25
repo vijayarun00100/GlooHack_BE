@@ -1,17 +1,20 @@
 from fastapi import APIRouter, HTTPException, Status, Query
 from datetime import date
 from typing import Any
+import uuid
 from app.schemas.domain import (
     UserResponse, TeacherResponse, StudentResponse, GradeResponse,
     SectionResponse, SubjectResponse, CourseResponse, RoomResponse,
     RoomUtilizationResponse, TimetableEntryResponse, GenerateTimetableRequest,
     SolverResultResponse, ConflictReportResponse, IngestEmailRequest,
     SubstitutionAgentResultResponse, RoomDisruptionRequest, RoomAllocationAgentResultResponse,
-    ApprovalRequestResponse, AgentEventResponse, AgentRunResponse, AgentDecisionResponse
+    ApprovalRequestResponse, AgentEventResponse, AgentRunResponse, AgentDecisionResponse,
+    CampusDisruptionRequest, RecoveryPlanResponse, DisruptionRecoveryResultResponse
 )
 from app.services.timetable_service import TimetableService
 from app.agents.teacher_substitution_agent import TeacherSubstitutionAgent
 from app.agents.room_allocation_agent import RoomAllocationAgent, RoomDisruptionEvent
+from app.agents.disruption_recovery_agent import DisruptionRecoveryAgent, DisruptionEvent, RecoveryPlan
 from app.solver.models import (
     SolverInput, SolverConfig, SchoolDayDTO, PeriodDTO, SectionDTO,
     CourseDTO, TeacherDTO, RoomDTO, TeacherCapabilityDTO, TeacherAvailabilityDTO,
@@ -22,6 +25,11 @@ api_router = APIRouter()
 timetable_service = TimetableService()
 substitution_agent = TeacherSubstitutionAgent()
 room_agent = RoomAllocationAgent()
+disruption_agent = DisruptionRecoveryAgent()
+
+DEMO_CAMPUS_DISRUPTIONS: list[dict[str, Any]] = []
+DEMO_RECOVERY_PLANS: dict[str, Any] = {}
+
 
 # In-memory stores for Phase 1, 2 & 3 demo endpoints
 DEMO_TIMETABLE_ENTRIES: list[ScheduledEntryDTO] = [
@@ -328,3 +336,233 @@ def list_agent_runs():
 @api_router.get("/approvals/pending", response_model=list[ApprovalRequestResponse], tags=["Approvals"])
 def list_pending_approvals():
     return []
+
+# ==========================================
+# PHASE 4 — DISRUPTION RECOVERY AGENT ENDPOINTS
+# ==========================================
+
+@api_router.post("/disruptions", tags=["Disruption Recovery"])
+def create_disruption(req: CampusDisruptionRequest):
+    event_id = str(uuid.uuid4())
+    disruption = {
+        "id": event_id,
+        "event_type": req.event_type,
+        "title": req.title,
+        "description": req.description,
+        "start_date": req.start_date,
+        "end_date": req.end_date,
+        "start_period": req.start_period,
+        "end_period": req.end_period,
+        "affected_rooms": req.affected_rooms,
+        "affected_teachers": req.affected_teachers,
+        "affected_sections": req.affected_sections,
+        "severity": req.severity,
+        "source": req.source,
+        "status": "OPEN",
+        "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    }
+    DEMO_CAMPUS_DISRUPTIONS.append(disruption)
+    return disruption
+
+@api_router.get("/disruptions", tags=["Disruption Recovery"])
+def get_all_disruptions():
+    return DEMO_CAMPUS_DISRUPTIONS
+
+@api_router.get("/disruptions/{disruption_id}", tags=["Disruption Recovery"])
+def get_disruption_by_id(disruption_id: str):
+    dis = next((d for d in DEMO_CAMPUS_DISRUPTIONS if d["id"] == disruption_id), None)
+    if not dis:
+        # Return fallback demo disruption if not found
+        return {
+            "id": disruption_id,
+            "event_type": "CAMPUS_DISRUPTION",
+            "title": "Building B Closure",
+            "description": "Building B is unavailable due to emergency maintenance.",
+            "start_date": "2026-08-25",
+            "end_date": "2026-08-25",
+            "start_period": "P1",
+            "end_period": "P5",
+            "affected_rooms": ["Room 201"],
+            "affected_teachers": ["Cooper"],
+            "affected_sections": ["8A", "8B"],
+            "severity": "HIGH",
+            "source": "ADMIN",
+            "status": "OPEN"
+        }
+    return dis
+
+@api_router.get("/disruptions/{disruption_id}/affected-classes", tags=["Disruption Recovery"])
+def get_disruption_affected_classes(disruption_id: str):
+    dis = next((d for d in DEMO_CAMPUS_DISRUPTIONS if d["id"] == disruption_id), None)
+    affected_rooms = dis["affected_rooms"] if dis else ["Room 201"]
+    affected_teachers = dis["affected_teachers"] if dis else ["Cooper"]
+    affected_sections = dis["affected_sections"] if dis else ["8A", "8B"]
+
+    affected = [
+        e.__dict__ for e in DEMO_TIMETABLE_ENTRIES
+        if e.room_id in affected_rooms or e.teacher_id in affected_teachers or e.section_id in affected_sections
+    ]
+    return {
+        "disruption_id": disruption_id,
+        "affected_classes_count": len(affected),
+        "affected_classes": affected
+    }
+
+@api_router.post("/agents/disruption-recovery/run", response_model=DisruptionRecoveryResultResponse, tags=["Disruption Recovery"])
+def run_disruption_recovery_agent(
+    title: str = Query("Building B Closure"),
+    affected_room: str = Query("Room 201"),
+    affected_teacher: str = Query("Cooper")
+):
+    solver_input = build_default_solver_input()
+
+    event = DisruptionEvent(
+        event_type="BUILDING_CLOSURE",
+        title=title,
+        description="Emergency closure affecting facility wing.",
+        start_date="2026-08-25",
+        end_date="2026-08-25",
+        start_period="P1",
+        end_period="P5",
+        affected_rooms=[affected_room],
+        affected_teachers=[affected_teacher],
+        affected_sections=["8A"],
+        severity="HIGH",
+        source="ADMIN"
+    )
+
+    result = disruption_agent.process_disruption(
+        event=event,
+        solver_input=solver_input,
+        existing_timetable=DEMO_TIMETABLE_ENTRIES,
+        current_version="v1.0"
+    )
+
+    # Store plans in demo memory store
+    for p in result.plans:
+        DEMO_RECOVERY_PLANS[p.plan_id] = p
+
+    plans_res = [
+        RecoveryPlanResponse(
+            plan_id=p.plan_id,
+            disruption_id=p.disruption_id,
+            timetable_version=p.timetable_version,
+            plan_title=p.plan_title,
+            ranking_category=p.ranking_category,
+            changes=[c.__dict__ for c in p.changes],
+            hard_conflicts=p.hard_conflicts,
+            soft_penalty=p.soft_penalty,
+            affected_classes=p.affected_classes,
+            affected_teachers=p.affected_teachers,
+            affected_rooms=p.affected_rooms,
+            status=p.status,
+            explanation=p.explanation,
+            created_at=p.created_at
+        ) for p in result.plans
+    ]
+
+    return DisruptionRecoveryResultResponse(
+        agent_run_id=result.agent_run_id,
+        event_id=result.event_id,
+        status=result.status,
+        execution_mode=result.execution_mode,
+        disruption_title=result.disruption_title,
+        affected_classes_count=result.affected_classes_count,
+        affected_teachers_count=result.affected_teachers_count,
+        affected_rooms_count=result.affected_rooms_count,
+        timetable_version=result.timetable_version,
+        plans=plans_res,
+        selected_plan_id=result.selected_plan_id,
+        summary=result.summary,
+        explanation=result.explanation,
+        approval_request_id=result.approval_request_id,
+        notifications_sent=result.notifications_sent,
+        created_at=result.created_at
+    )
+
+@api_router.get("/disruptions/{disruption_id}/recovery-plans", tags=["Disruption Recovery"])
+def get_recovery_plans_for_disruption(disruption_id: str):
+    plans = [p for p in DEMO_RECOVERY_PLANS.values() if p.disruption_id == disruption_id]
+    if not plans:
+        # Generate demo candidate plan if empty
+        demo_plan = RecoveryPlan(
+            plan_id=str(uuid.uuid4()),
+            disruption_id=disruption_id,
+            timetable_version="v1.0",
+            plan_title="Plan A: Room Reallocation & Substitute Matching",
+            ranking_category="CLEAN_RECOVERY",
+            changes=[],
+            hard_conflicts=0,
+            soft_penalty=0.0,
+            affected_classes=2,
+            affected_teachers=1,
+            affected_rooms=1,
+            status="PROPOSED",
+            explanation="Reassigns Room 201 to Science Lab 1 cleanly.",
+            created_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        )
+        DEMO_RECOVERY_PLANS[demo_plan.plan_id] = demo_plan
+        plans = [demo_plan]
+    return [p.__dict__ for p in plans]
+
+@api_router.get("/recovery-plans/{plan_id}", tags=["Disruption Recovery"])
+def get_recovery_plan_by_id(plan_id: str):
+    plan = DEMO_RECOVERY_PLANS.get(plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail="Recovery plan not found")
+    return plan.__dict__ if hasattr(plan, '__dict__') else plan
+
+@api_router.post("/recovery-plans/{plan_id}/approve", tags=["Disruption Recovery"])
+def approve_recovery_plan(plan_id: str):
+    plan = DEMO_RECOVERY_PLANS.get(plan_id)
+    solver_input = build_default_solver_input()
+
+    if plan and hasattr(plan, 'changes'):
+        success, updated, err = disruption_agent.execute_recovery_plan(
+            plan=plan,
+            solver_input=solver_input,
+            existing_timetable=DEMO_TIMETABLE_ENTRIES,
+            current_version="v1.0"
+        )
+        if not success:
+            raise HTTPException(status_code=400, detail=f"Atomic execution failed: {err}")
+        return {
+            "status": "EXECUTED",
+            "message": "Recovery plan approved and applied atomically to active timetable.",
+            "plan_id": plan_id
+        }
+
+    # Demo fallback approval
+    for entry in DEMO_TIMETABLE_ENTRIES:
+        if entry.room_id == "Room 201":
+            entry.room_id = "Science Lab 1"
+            entry.flag = "recovered"
+            entry.status = "RECOVERED"
+    return {
+        "status": "EXECUTED",
+        "message": "Recovery plan approved and applied atomically to active timetable.",
+        "plan_id": plan_id
+    }
+
+@api_router.post("/recovery-plans/{plan_id}/reject", tags=["Disruption Recovery"])
+def reject_recovery_plan(plan_id: str):
+    plan = DEMO_RECOVERY_PLANS.get(plan_id)
+    if plan and hasattr(plan, 'status'):
+        plan.status = "REJECTED"
+    return {
+        "status": "REJECTED",
+        "message": "Recovery plan rejected by administrator.",
+        "plan_id": plan_id
+    }
+
+@api_router.post("/recovery-plans/{plan_id}/cancel", tags=["Disruption Recovery"])
+def cancel_recovery_plan(plan_id: str):
+    plan = DEMO_RECOVERY_PLANS.get(plan_id)
+    if plan and hasattr(plan, 'status'):
+        plan.status = "CANCELLED"
+    return {
+        "status": "CANCELLED",
+        "message": "Recovery plan cancelled.",
+        "plan_id": plan_id
+    }
+
