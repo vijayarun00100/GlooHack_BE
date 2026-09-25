@@ -18,7 +18,11 @@ from app.schemas.domain import (
     StudySprintResponse, StudyTaskResponse, StudyProgressResponse, PlanlyAgentResultResponse,
     GamificationProfileResponse, AchievementResponse, StudentAchievementResponse,
     GamificationEventRequest, SocialPostCreateRequest, SocialPostResponse,
-    SocialReactionRequest, SocialPrivacySettingsRequest, SocialPrivacySettingsResponse
+    SocialReactionRequest, SocialPrivacySettingsRequest, SocialPrivacySettingsResponse,
+    StriverDocumentCreateRequest, StriverDocumentResponse, StriverSessionStartRequest,
+    StriverSessionResponse, StriverExplainRequest, StriverExplainResponse,
+    StriverPracticeQuestionResponse, StriverPracticeAnswerRequest, StriverPracticeResultResponse,
+    StriverQuizQuestionResponse, StriverQuizAnswerRequest, StriverQuizResultResponse, StriverMasteryResponse
 )
 from app.services.timetable_service import TimetableService
 from app.agents.teacher_substitution_agent import TeacherSubstitutionAgent
@@ -28,6 +32,7 @@ from app.agents.family_alignment_agent import FamilyAlignmentAgent, FamilyAlignm
 from app.agents.schedule_quality_agent import ScheduleQualityAgent, QualityReviewRequest, ScheduleOptimizationPlan
 from app.agents.planly_agent import PlanlyAgent
 from app.agents.gamification_agent import GamificationAgent
+from app.agents.striver_agent import StriverAgent
 from app.solver.models import (
     SolverInput, SolverConfig, SchoolDayDTO, PeriodDTO, SectionDTO,
     CourseDTO, TeacherDTO, RoomDTO, TeacherCapabilityDTO, TeacherAvailabilityDTO,
@@ -43,6 +48,8 @@ family_agent = FamilyAlignmentAgent()
 quality_agent = ScheduleQualityAgent()
 planly_agent = PlanlyAgent()
 gamification_agent = GamificationAgent()
+striver_agent = StriverAgent(gamification_agent=gamification_agent)
+
 
 
 
@@ -1109,6 +1116,57 @@ def get_social_privacy_settings(student_id: str = "student-101"):
 def update_social_privacy_settings(req: SocialPrivacySettingsRequest):
     """Update student privacy settings."""
     return gamification_agent.update_privacy_settings(req)
+
+
+# ==========================================
+# PHASE 9 — STRIVER RAG LEARNING ENDPOINTS
+# ==========================================
+
+@api_router.post("/striver/documents", response_model=StriverDocumentResponse, tags=["Striver RAG Companion"])
+def ingest_striver_document(req: StriverDocumentCreateRequest):
+    """Ingest educational material into Striver pgvector knowledge base."""
+    return striver_agent.ingest_document(req)
+
+@api_router.get("/striver/documents", response_model=list[StriverDocumentResponse], tags=["Striver RAG Companion"])
+def list_striver_documents():
+    """List indexed educational documents."""
+    return [StriverDocumentResponse(**d) for d in striver_agent.documents.values()]
+
+@api_router.post("/striver/sessions", response_model=StriverSessionResponse, tags=["Striver RAG Companion"])
+def start_striver_session(req: StriverSessionStartRequest):
+    """Start a Striver study companion session integrated with Planly task context."""
+    return striver_agent.start_session(req)
+
+@api_router.post("/striver/explain", response_model=StriverExplainResponse, tags=["Striver RAG Companion"])
+def generate_striver_explanation(req: StriverExplainRequest):
+    """Generate adaptive RAG explanation with source citations."""
+    return striver_agent.generate_explanation(req)
+
+@api_router.get("/striver/practice", response_model=StriverPracticeQuestionResponse, tags=["Striver RAG Companion"])
+def get_striver_practice_question(topic: str = "Quadratic Equations"):
+    """Retrieve guided practice problem for active topic."""
+    return striver_agent.get_practice_question(topic)
+
+@api_router.post("/striver/practice/answer", response_model=StriverPracticeResultResponse, tags=["Striver RAG Companion"])
+def evaluate_striver_practice_answer(req: StriverPracticeAnswerRequest):
+    """Evaluate practice problem answer, update topic mastery, and return sources."""
+    return striver_agent.evaluate_practice_answer(req)
+
+@api_router.get("/striver/quiz", response_model=list[StriverQuizQuestionResponse], tags=["Striver RAG Companion"])
+def get_striver_quiz(topic: str = "Quadratic Equations"):
+    """Generate 5-question topic quiz grounded in retrieved materials."""
+    return striver_agent.get_quiz_questions(topic)
+
+@api_router.post("/striver/quiz/answer", response_model=StriverQuizResultResponse, tags=["Striver RAG Companion"])
+def submit_striver_quiz(req: StriverQuizAnswerRequest):
+    """Submit quiz answers, update topic mastery, and emit Gamification XP event."""
+    return striver_agent.submit_quiz(req)
+
+@api_router.get("/striver/mastery", response_model=StriverMasteryResponse, tags=["Striver RAG Companion"])
+def get_striver_topic_mastery(student_id: str = "student-101", subject: str = "Mathematics", topic: str = "Quadratic Equations"):
+    """Retrieve topic mastery score and confidence level."""
+    return striver_agent.get_mastery(student_id, subject, topic)
+
 
 
 

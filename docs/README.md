@@ -72,6 +72,17 @@
 - [75 Privacy & Safety](file:///d:/GlooHack/docs/75_PRIVACY_AND_SAFETY.md)
 - [76 Phase 8 Decisions](file:///d:/GlooHack/docs/76_PHASE_8_DECISIONS.md)
 
+## Phase 9 - Striver: RAG-Powered Personal Study Companion
+- [80 Striver Overview](file:///d:/GlooHack/docs/80_STRIVER_OVERVIEW.md)
+- [81 Striver Architecture](file:///d:/GlooHack/docs/81_STRIVER_ARCHITECTURE.md)
+- [82 Striver RAG Pipeline](file:///d:/GlooHack/docs/82_STRIVER_RAG_PIPELINE.md)
+- [83 Striver Knowledge Base](file:///d:/GlooHack/docs/83_STRIVER_KNOWLEDGE_BASE.md)
+- [84 Striver Mastery Model](file:///d:/GlooHack/docs/84_STRIVER_MASTERY_MODEL.md)
+- [85 Striver Planly Integration](file:///d:/GlooHack/docs/85_STRIVER_PLANLY_INTEGRATION.md)
+- [86 Striver Gamification Integration](file:///d:/GlooHack/docs/86_STRIVER_GAMIFICATION_INTEGRATION.md)
+- [87 Phase 9 Decisions](file:///d:/GlooHack/docs/87_PHASE_9_DECISIONS.md)
+
+
 
 
 

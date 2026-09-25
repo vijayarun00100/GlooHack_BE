@@ -744,6 +744,125 @@ class SocialPrivacySettingsResponse(BaseModel):
     updated_at: str
 
 
+# ==========================================
+# PHASE 9 — STRIVER RAG LEARNING SCHEMAS
+# ==========================================
+
+class StriverDocumentCreateRequest(BaseModel):
+    title: str
+    subject: str = "Mathematics"
+    grade: int = 9
+    course: str = "Mathematics"
+    uploaded_by: str = "teacher-001"
+    source_type: str = "CHAPTER_NOTES"
+    content: str
+
+class StriverDocumentResponse(BaseModel):
+    id: str
+    title: str
+    subject: str
+    grade: int
+    course: str
+    source_type: str
+    status: str = "READY"
+    chunk_count: int = 0
+    created_at: str
+
+class StriverSessionStartRequest(BaseModel):
+    student_id: str = "student-101"
+    planly_task_id: Optional[str] = "task-1"
+    subject: str = "Mathematics"
+    topic: str = "Quadratic Equations"
+    mode: str = "EXPLAIN"
+
+class StriverSessionResponse(BaseModel):
+    id: str
+    student_id: str
+    planly_task_id: Optional[str] = None
+    subject: str
+    topic: str
+    mode: str
+    started_at: str
+    completed_at: Optional[str] = None
+    mastery_before: float = 60.0
+    mastery_after: float = 71.0
+
+class StriverSourceCitation(BaseModel):
+    document_title: str
+    page_number: int = 1
+    chapter: str = ""
+    relevance_score: float = 0.92
+
+class StriverExplainRequest(BaseModel):
+    session_id: Optional[str] = None
+    student_id: str = "student-101"
+    subject: str = "Mathematics"
+    topic: str = "Quadratic Equations"
+    prompt: str = "Explain quadratic equations simply."
+    mode: str = "EXPLAIN" # 'EXPLAIN', 'SIMPLE', 'DEEP_DIVE', 'EXAMPLE', 'ANALOGY', 'STEP_BY_STEP', 'REVISION', 'EXAM_PREP', 'SOCRATIC'
+
+class StriverExplainResponse(BaseModel):
+    session_id: str
+    question: str
+    explanation: str
+    sources: list[StriverSourceCitation] = []
+    mode: str = "EXPLAIN"
+    grounded_in_materials: bool = True
+
+class StriverPracticeQuestionResponse(BaseModel):
+    question_id: str
+    topic: str
+    question: str
+    hints: list[str] = []
+    expected_answer: str
+
+class StriverPracticeAnswerRequest(BaseModel):
+    session_id: str
+    question_id: str
+    student_answer: str
+
+class StriverPracticeResultResponse(BaseModel):
+    question_id: str
+    is_correct: bool
+    feedback: str
+    explanation: str
+    sources: list[StriverSourceCitation] = []
+    updated_mastery: float
+
+class StriverQuizQuestionResponse(BaseModel):
+    question_id: str
+    question: str
+    options: list[str] = []
+    expected_answer: str
+
+class StriverQuizAnswerRequest(BaseModel):
+    session_id: str
+    answers: dict[str, str] # question_id -> student_answer
+
+class StriverQuizResultResponse(BaseModel):
+    session_id: str
+    score: int
+    total_questions: int = 5
+    accuracy_percentage: float
+    mastery_before: float
+    mastery_after: float
+    mastery_level: str = "PRACTICING"
+    gamification_xp_earned: int = 50
+    recommendation: str
+
+class StriverMasteryResponse(BaseModel):
+    student_id: str
+    subject: str
+    topic: str
+    mastery_score: float = 71.0
+    mastery_level: str = "PRACTICING" # 'NEEDS_SUPPORT', 'DEVELOPING', 'PRACTICING', 'STRONG', 'MASTERED'
+    confidence: str = "MEDIUM"
+    attempts: int = 8
+    correct_attempts: int = 6
+    last_practiced_at: str
+
+
+
 
 
 
