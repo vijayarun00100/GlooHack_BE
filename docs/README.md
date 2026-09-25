@@ -39,3 +39,11 @@
 - [32 Recovery Constraints](file:///d:/GlooHack/docs/32_RECOVERY_CONSTRAINTS.md)
 - [33 Recovery API Reference](file:///d:/GlooHack/docs/33_RECOVERY_API.md)
 - [34 Phase 4 Decisions](file:///d:/GlooHack/docs/34_PHASE_4_DECISIONS.md)
+
+## Phase 5 - Family Day Alignment Agent
+- [40 Family Day Alignment Agent Overview](file:///d:/GlooHack/docs/40_FAMILY_ALIGNMENT_AGENT.md)
+- [41 Family Alignment Architecture](file:///d:/GlooHack/docs/41_FAMILY_ALIGNMENT_ARCHITECTURE.md)
+- [42 Family Alignment Constraints](file:///d:/GlooHack/docs/42_FAMILY_ALIGNMENT_CONSTRAINTS.md)
+- [43 Family Alignment API Reference](file:///d:/GlooHack/docs/43_FAMILY_ALIGNMENT_API.md)
+- [44 Phase 5 Decisions](file:///d:/GlooHack/docs/44_PHASE_5_DECISIONS.md)
+

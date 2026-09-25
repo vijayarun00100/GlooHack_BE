@@ -372,3 +372,66 @@ class DisruptionRecoveryResultResponse(BaseModel):
     notifications_sent: int = 0
     created_at: str
 
+# ==========================================
+# FAMILY DAY ALIGNMENT AGENT SCHEMAS
+# ==========================================
+
+class FamilyAlignmentRequestSchema(BaseModel):
+    family_id: str = "family-001"
+    family_name: str = "Arun Family"
+    requested_by: str = "parent-001"
+    student_ids: list[str] = ["student-101", "student-202", "student-303"]
+    target_alignment: str = "MAXIMIZE"
+    preferred_days: list[str] = ["WEDNESDAY", "FRIDAY"]
+    effective_start_date: str = "2026-10-01"
+    effective_end_date: str = "2026-10-31"
+    reason: str = "Sibling transportation"
+
+class AlignmentChangeItemResponse(BaseModel):
+    student_id: str
+    student_name: str
+    grade_section: str
+    school_date: str
+    day_of_week: str
+    old_state: str
+    new_state: str
+    change_reason: str = ""
+
+class FamilyAlignmentPlanResponse(BaseModel):
+    plan_id: str
+    request_id: str
+    family_id: str
+    family_name: str
+    timetable_version: str
+    plan_title: str
+    ranking_category: str
+    changes: list[AlignmentChangeItemResponse] = []
+    alignment_before: int = 0
+    alignment_after: int = 0
+    total_days: int = 5
+    hard_conflicts: int = 0
+    soft_penalty: float = 0.0
+    status: str
+    explanation: str
+    created_at: str
+
+class FamilyAlignmentResultResponse(BaseModel):
+    agent_run_id: str
+    request_id: str
+    family_id: str
+    family_name: str
+    status: str
+    execution_mode: str
+    siblings_count: int
+    alignment_before: int
+    alignment_after: int
+    timetable_version: str
+    plans: list[FamilyAlignmentPlanResponse] = []
+    selected_plan_id: Optional[str] = None
+    summary: str
+    explanation: str
+    approval_request_id: Optional[str] = None
+    notifications_sent: int = 0
+    created_at: str
+
+

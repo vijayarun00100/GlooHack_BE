@@ -9,12 +9,14 @@ from app.schemas.domain import (
     SolverResultResponse, ConflictReportResponse, IngestEmailRequest,
     SubstitutionAgentResultResponse, RoomDisruptionRequest, RoomAllocationAgentResultResponse,
     ApprovalRequestResponse, AgentEventResponse, AgentRunResponse, AgentDecisionResponse,
-    CampusDisruptionRequest, RecoveryPlanResponse, DisruptionRecoveryResultResponse
+    CampusDisruptionRequest, RecoveryPlanResponse, DisruptionRecoveryResultResponse,
+    FamilyAlignmentRequestSchema, FamilyAlignmentPlanResponse, FamilyAlignmentResultResponse
 )
 from app.services.timetable_service import TimetableService
 from app.agents.teacher_substitution_agent import TeacherSubstitutionAgent
 from app.agents.room_allocation_agent import RoomAllocationAgent, RoomDisruptionEvent
 from app.agents.disruption_recovery_agent import DisruptionRecoveryAgent, DisruptionEvent, RecoveryPlan
+from app.agents.family_alignment_agent import FamilyAlignmentAgent, FamilyAlignmentRequest, StudentDaySchedule, FamilyAlignmentPlan
 from app.solver.models import (
     SolverInput, SolverConfig, SchoolDayDTO, PeriodDTO, SectionDTO,
     CourseDTO, TeacherDTO, RoomDTO, TeacherCapabilityDTO, TeacherAvailabilityDTO,
@@ -26,9 +28,25 @@ timetable_service = TimetableService()
 substitution_agent = TeacherSubstitutionAgent()
 room_agent = RoomAllocationAgent()
 disruption_agent = DisruptionRecoveryAgent()
+family_agent = FamilyAlignmentAgent()
 
 DEMO_CAMPUS_DISRUPTIONS: list[dict[str, Any]] = []
 DEMO_RECOVERY_PLANS: dict[str, Any] = {}
+DEMO_FAMILIES: list[dict[str, Any]] = [
+    {
+        "id": "family-001",
+        "family_name": "Arun Family",
+        "requested_by": "parent-001",
+        "students": [
+            {"student_id": "student-101", "student_name": "Student A", "grade_section": "7A"},
+            {"student_id": "student-202", "student_name": "Student B", "grade_section": "9A"},
+            {"student_id": "student-303", "student_name": "Student C", "grade_section": "11A"}
+        ]
+    }
+]
+DEMO_ALIGNMENT_REQUESTS: list[dict[str, Any]] = []
+DEMO_ALIGNMENT_PLANS: dict[str, Any] = {}
+
 
 
 # In-memory stores for Phase 1, 2 & 3 demo endpoints
@@ -565,4 +583,235 @@ def cancel_recovery_plan(plan_id: str):
         "message": "Recovery plan cancelled.",
         "plan_id": plan_id
     }
+
+# ==========================================
+# PHASE 5 — FAMILY DAY ALIGNMENT AGENT ENDPOINTS
+# ==========================================
+
+@api_router.post("/families", tags=["Family Day Alignment"])
+def create_family(family_name: str = Query("Arun Family"), requested_by: str = Query("parent-001")):
+    fam_id = str(uuid.uuid4())
+    family = {
+        "id": fam_id,
+        "family_name": family_name,
+        "requested_by": requested_by,
+        "students": [
+            {"student_id": "student-101", "student_name": "Student A", "grade_section": "7A"},
+            {"student_id": "student-202", "student_name": "Student B", "grade_section": "9A"},
+            {"student_id": "student-303", "student_name": "Student C", "grade_section": "11A"}
+        ],
+        "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    }
+    DEMO_FAMILIES.append(family)
+    return family
+
+@api_router.get("/families", tags=["Family Day Alignment"])
+def get_all_families():
+    return DEMO_FAMILIES
+
+@api_router.get("/families/{family_id}", tags=["Family Day Alignment"])
+def get_family_by_id(family_id: str):
+    fam = next((f for f in DEMO_FAMILIES if f["id"] == family_id), None)
+    if not fam:
+        return DEMO_FAMILIES[0]
+    return fam
+
+@api_router.get("/families/{family_id}/students", tags=["Family Day Alignment"])
+def get_family_students(family_id: str):
+    fam = next((f for f in DEMO_FAMILIES if f["id"] == family_id), None)
+    students = fam["students"] if fam else DEMO_FAMILIES[0]["students"]
+    return {
+        "family_id": family_id,
+        "family_name": fam["family_name"] if fam else "Arun Family",
+        "siblings_count": len(students),
+        "students": students
+    }
+
+@api_router.post("/families/{family_id}/alignment-requests", tags=["Family Day Alignment"])
+def create_family_alignment_request(family_id: str, req: FamilyAlignmentRequestSchema):
+    req_id = str(uuid.uuid4())
+    alignment_req = {
+        "id": req_id,
+        "family_id": family_id,
+        "family_name": req.family_name,
+        "requested_by": req.requested_by,
+        "student_ids": req.student_ids,
+        "target_alignment": req.target_alignment,
+        "preferred_days": req.preferred_days,
+        "effective_start_date": req.effective_start_date,
+        "effective_end_date": req.effective_end_date,
+        "reason": req.reason,
+        "status": "OPEN",
+        "created_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    }
+    DEMO_ALIGNMENT_REQUESTS.append(alignment_req)
+    return alignment_req
+
+@api_router.get("/families/{family_id}/alignment-requests", tags=["Family Day Alignment"])
+def get_alignment_requests_for_family(family_id: str):
+    return [r for r in DEMO_ALIGNMENT_REQUESTS if r["family_id"] == family_id]
+
+@api_router.get("/family-alignment/{request_id}", tags=["Family Day Alignment"])
+def get_alignment_request_by_id(request_id: str):
+    req = next((r for r in DEMO_ALIGNMENT_REQUESTS if r["id"] == request_id), None)
+    if not req:
+        return {
+            "id": request_id,
+            "family_id": "family-001",
+            "family_name": "Arun Family",
+            "requested_by": "parent-001",
+            "student_ids": ["student-101", "student-202", "student-303"],
+            "target_alignment": "MAXIMIZE",
+            "status": "OPEN"
+        }
+    return req
+
+@api_router.post("/agents/family-alignment/run", response_model=FamilyAlignmentResultResponse, tags=["Family Day Alignment"])
+def run_family_alignment_agent(
+    family_id: str = Query("family-001"),
+    family_name: str = Query("Arun Family")
+):
+    solver_input = build_default_solver_input()
+
+    req = FamilyAlignmentRequest(
+        family_id=family_id,
+        family_name=family_name,
+        requested_by="parent-001",
+        student_ids=["student-101", "student-202", "student-303"],
+        target_alignment="MAXIMIZE"
+    )
+
+    # Demo student schedules across Mon-Fri
+    demo_schedules = [
+        # Student A (Grade 7A): MON Campus, TUE Campus, WED Home, THU Campus, FRI Home
+        StudentDaySchedule(student_id="student-101", student_name="Student A", grade_section="7A", school_date="2026-10-05", day_of_week="MON", attendance_state="CAMPUS"),
+        StudentDaySchedule(student_id="student-101", student_name="Student A", grade_section="7A", school_date="2026-10-06", day_of_week="TUE", attendance_state="CAMPUS"),
+        StudentDaySchedule(student_id="student-101", student_name="Student A", grade_section="7A", school_date="2026-10-07", day_of_week="WED", attendance_state="HOME"),
+        StudentDaySchedule(student_id="student-101", student_name="Student A", grade_section="7A", school_date="2026-10-08", day_of_week="THU", attendance_state="CAMPUS"),
+        StudentDaySchedule(student_id="student-101", student_name="Student A", grade_section="7A", school_date="2026-10-09", day_of_week="FRI", attendance_state="HOME"),
+        # Student B (Grade 9A): MON Campus, TUE Home, WED Campus, THU Campus, FRI Home
+        StudentDaySchedule(student_id="student-202", student_name="Student B", grade_section="9A", school_date="2026-10-05", day_of_week="MON", attendance_state="CAMPUS"),
+        StudentDaySchedule(student_id="student-202", student_name="Student B", grade_section="9A", school_date="2026-10-06", day_of_week="TUE", attendance_state="HOME"),
+        StudentDaySchedule(student_id="student-202", student_name="Student B", grade_section="9A", school_date="2026-10-07", day_of_week="WED", attendance_state="CAMPUS"),
+        StudentDaySchedule(student_id="student-202", student_name="Student B", grade_section="9A", school_date="2026-10-08", day_of_week="THU", attendance_state="CAMPUS"),
+        StudentDaySchedule(student_id="student-202", student_name="Student B", grade_section="9A", school_date="2026-10-09", day_of_week="FRI", attendance_state="HOME"),
+        # Student C (Grade 11A): MON Campus, TUE Campus, WED Home, THU Home, FRI Home
+        StudentDaySchedule(student_id="student-303", student_name="Student C", grade_section="11A", school_date="2026-10-05", day_of_week="MON", attendance_state="CAMPUS"),
+        StudentDaySchedule(student_id="student-303", student_name="Student C", grade_section="11A", school_date="2026-10-06", day_of_week="TUE", attendance_state="CAMPUS"),
+        StudentDaySchedule(student_id="student-303", student_name="Student C", grade_section="11A", school_date="2026-10-07", day_of_week="WED", attendance_state="HOME"),
+        StudentDaySchedule(student_id="student-303", student_name="Student C", grade_section="11A", school_date="2026-10-08", day_of_week="THU", attendance_state="HOME"),
+        StudentDaySchedule(student_id="student-303", student_name="Student C", grade_section="11A", school_date="2026-10-09", day_of_week="FRI", attendance_state="HOME"),
+    ]
+
+    result = family_agent.process_alignment_request(
+        request=req,
+        solver_input=solver_input,
+        existing_timetable=DEMO_TIMETABLE_ENTRIES,
+        family_student_schedules=demo_schedules,
+        current_version="v1.0"
+    )
+
+    for p in result.plans:
+        DEMO_ALIGNMENT_PLANS[p.plan_id] = p
+
+    plans_res = [
+        FamilyAlignmentPlanResponse(
+            plan_id=p.plan_id,
+            request_id=p.request_id,
+            family_id=p.family_id,
+            family_name=p.family_name,
+            timetable_version=p.timetable_version,
+            plan_title=p.plan_title,
+            ranking_category=p.ranking_category,
+            changes=[c.__dict__ for c in p.changes],
+            alignment_before=p.alignment_before,
+            alignment_after=p.alignment_after,
+            total_days=p.total_days,
+            hard_conflicts=p.hard_conflicts,
+            soft_penalty=p.soft_penalty,
+            status=p.status,
+            explanation=p.explanation,
+            created_at=p.created_at
+        ) for p in result.plans
+    ]
+
+    return FamilyAlignmentResultResponse(
+        agent_run_id=result.agent_run_id,
+        request_id=result.request_id,
+        family_id=result.family_id,
+        family_name=result.family_name,
+        status=result.status,
+        execution_mode=result.execution_mode,
+        siblings_count=result.siblings_count,
+        alignment_before=result.alignment_before,
+        alignment_after=result.alignment_after,
+        timetable_version=result.timetable_version,
+        plans=plans_res,
+        selected_plan_id=result.selected_plan_id,
+        summary=result.summary,
+        explanation=result.explanation,
+        approval_request_id=result.approval_request_id,
+        notifications_sent=result.notifications_sent,
+        created_at=result.created_at
+    )
+
+@api_router.get("/family-alignment/{request_id}/plans", tags=["Family Day Alignment"])
+def get_alignment_plans_for_request(request_id: str):
+    plans = [p for p in DEMO_ALIGNMENT_PLANS.values() if p.request_id == request_id]
+    if not plans:
+        demo_plan = FamilyAlignmentPlan(
+            plan_id=str(uuid.uuid4()),
+            request_id=request_id,
+            family_id="family-001",
+            family_name="Arun Family",
+            timetable_version="v1.0",
+            plan_title="Plan A: Full Family Day Alignment (5/5 Days Aligned)",
+            ranking_category="FULL_ALIGNMENT",
+            changes=[],
+            alignment_before=3,
+            alignment_after=5,
+            total_days=5,
+            hard_conflicts=0,
+            soft_penalty=0.0,
+            status="PROPOSED",
+            explanation="Aligns all 3 siblings to Mon/Tue/Thu Campus and Wed/Fri Home.",
+            created_at=time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+        )
+        DEMO_ALIGNMENT_PLANS[demo_plan.plan_id] = demo_plan
+        plans = [demo_plan]
+    return [p.__dict__ for p in plans]
+
+@api_router.post("/family-alignment/plans/{plan_id}/approve", tags=["Family Day Alignment"])
+def approve_alignment_plan(plan_id: str):
+    plan = DEMO_ALIGNMENT_PLANS.get(plan_id)
+    if plan and hasattr(plan, 'status'):
+        plan.status = "EXECUTED"
+    return {
+        "status": "EXECUTED",
+        "message": "Family Day Alignment Plan approved and applied atomically to active sibling schedules.",
+        "plan_id": plan_id
+    }
+
+@api_router.post("/family-alignment/plans/{plan_id}/reject", tags=["Family Day Alignment"])
+def reject_alignment_plan(plan_id: str):
+    plan = DEMO_ALIGNMENT_PLANS.get(plan_id)
+    if plan and hasattr(plan, 'status'):
+        plan.status = "REJECTED"
+    return {
+        "status": "REJECTED",
+        "message": "Family Day Alignment Plan rejected by administrator.",
+        "plan_id": plan_id
+    }
+
+@api_router.post("/family-alignment/plans/{plan_id}/cancel", tags=["Family Day Alignment"])
+def cancel_alignment_plan(plan_id: str):
+    plan = DEMO_ALIGNMENT_PLANS.get(plan_id)
+    if plan and hasattr(plan, 'status'):
+        plan.status = "CANCELLED"
+    return {
+        "status": "CANCELLED",
+        "message": "Family Day Alignment Plan cancelled.",
+        "plan_id": plan_id
+    }
+
 
