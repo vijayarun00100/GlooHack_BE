@@ -79,8 +79,10 @@
 - [83 Striver Knowledge Base](file:///d:/GlooHack/docs/83_STRIVER_KNOWLEDGE_BASE.md)
 - [84 Striver Mastery Model](file:///d:/GlooHack/docs/84_STRIVER_MASTERY_MODEL.md)
 - [85 Striver Planly Integration](file:///d:/GlooHack/docs/85_STRIVER_PLANLY_INTEGRATION.md)
-- [86 Striver Gamification Integration](file:///d:/GlooHack/docs/86_STRIVER_GAMIFICATION_INTEGRATION.md)
-- [87 Phase 9 Decisions](file:///d:/GlooHack/docs/87_PHASE_9_DECISIONS.md)
+## Phase 10A - Production Data Integration & Student Portal Restructure
+- [100 Data Source Audit](file:///d:/GlooHack/docs/100_DATA_SOURCE_AUDIT.md)
+- [101 Phase 10A Final Implementation Report](file:///d:/GlooHack/docs/101_PHASE_10A_FINAL_IMPLEMENTATION_REPORT.md)
+
 
 
 

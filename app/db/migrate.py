@@ -11,13 +11,17 @@ def run_migrations():
         conn.autocommit = True
         cursor = conn.cursor()
 
-        sql_file_path = os.path.join(os.path.dirname(__file__), "migrations", "001_initial_schema.sql")
-        with open(sql_file_path, "r", encoding="utf-8") as f:
-            sql_script = f.read()
+        migrations_dir = os.path.join(os.path.dirname(__file__), "migrations")
+        migration_files = sorted([f for f in os.listdir(migrations_dir) if f.endswith(".sql")])
 
-        print(f"[Python Migration] Executing 001_initial_schema.sql DDL script...")
-        cursor.execute(sql_script)
-        print("[Python Migration] Database schema migration executed successfully!")
+        for filename in migration_files:
+            sql_file_path = os.path.join(migrations_dir, filename)
+            print(f"[Python Migration] Executing {filename}...")
+            with open(sql_file_path, "r", encoding="utf-8") as f:
+                sql_script = f.read()
+            cursor.execute(sql_script)
+
+        print(f"[Python Migration] All {len(migration_files)} migrations executed successfully!")
         cursor.close()
         conn.close()
     except Exception as e:
@@ -26,3 +30,4 @@ def run_migrations():
 
 if __name__ == "__main__":
     run_migrations()
+
