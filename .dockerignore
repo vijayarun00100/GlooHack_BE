@@ -1,0 +1,35 @@
+# Python cache & compiled binaries
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Environments
+.venv/
+venv/
+ENV/
+env/
+
+# IDE & Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment variables & secrets
+.env
+.env.local
+.env.*.local
+
+# Git & local test caches
+.git/
+.gitignore
+.pytest_cache/
+.coverage
+htmlcov/
+tests/
+
+# Docker build artifacts
+Dockerfile*
+docker-compose*.yml
+.dockerignore
